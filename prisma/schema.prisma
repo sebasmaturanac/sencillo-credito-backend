@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ROLE {
+  VENDEDOR
+  COMERCIALIZADORA
+  AUTORIZADOR
+  SUPERUSER
+}
+
+enum AVAILABLEAPP {
+  APP_MOVIL
+  APP_ADMIN
+}
+
+model AvailableApp {
+  nombre AVAILABLEAPP       @unique @default(APP_MOVIL)
+  user   UserAvailableApp[]
+}
+
+model User {
+  id                             Int                @id @default(autoincrement())
+  name                           String // aqui se pondria el nombre de la comercializadora, o tambien el de cualquier usuario para mostrar su nombre en la UI o su username.
+  username                       String             @unique
+  password                       String
+  comercializadora               User?              @relation("VendedorPerteneceComercializadora", fields: [comercializadoraId], references: [id])
+  comercializadoraId             Int?
+  loggedIn                       Boolean            @default(false)
+  lastLogin                      DateTime?
+  role                           ROLE               @default(VENDEDOR)
+  pushNotificationToken          String?
+  pushNotificationTokenUpdatedAt DateTime?
+  suspended                      Boolean            @default(false)
+  suspendedAt                    DateTime?
+  createdAt                      DateTime           @default(now())
+  updatedAt                      DateTime           @updatedAt
+  deleted                        Boolean            @default(false)
+  deletedAt                      DateTime?
+  allowedApps                    UserAvailableApp[]
+  pedidosCreados                 Pedido[]           @relation("CreadoPor")
+  vendedoresComercializadora     User[]             @relation("VendedorPerteneceComercializadora")
+  pedidoEstado                   PedidoEstado[]
+  receivedMessages               UsersHasMessages[] @relation("ReceivedMessages")
+  sendedMessages                 UsersHasMessages[] @relation("SendedMessages")
+  pedidosComision                PedidoComision[]
+}
+
+model UserAvailableApp {
+  availableApp       AvailableApp @relation(fields: [availableAppNombre], references: [nombre])
+  availableAppNombre AVAILABLEAPP
+  user               User         @relation(fields: [userId], references: [id])
+  userId             Int
+
+  @@id([availableAppNombre, userId])
+}
+
+enum ENTIDAD {
+  BANCO
+  INSTITUCION
+}
+
+model Entidad {
+  id        Int       @id @default(autoincrement())
+  tipo      ENTIDAD
+  nombre    String
+  deleted   Boolean   @default(false)
+  deletedAt DateTime?
+  pedidos   Pedido[]
+}
+
+enum TIPOCONSULTA {
+  PRESTAMO
+  ELECTRODOMESTICO
+}
+
+model TipoConsulta {
+  id      Int          @id @default(autoincrement())
+  nombre  TIPOCONSULTA
+  deleted Boolean      @default(false)
+  pedidos Pedido[]
+}
+
+model AttachmentFile {
+  mimetype String
+  url      String
+  target   String
+  pedido   Pedido @relation(fields: [pedidoId], references: [id])
+  pedidoId Int
+
+  @@id([pedidoId, target])
+}
+
+enum SEXO {
+  MASCULINO
+  FEMENINO
+  NO_BINARIO
+}
+
+model Cliente {
+  id                  Int      @id @default(autoincrement())
+  nombre              String
+  apellido            String
+  dni                 String   @unique
+  sexo                SEXO
+  pedidos             Pedido[]
+  permitirNuevoPedido Boolean  @default(false) //este campo sirve para que un autorizador permita cargarse un pedido al cliente en cuestion sin importar si pasaron los dias de espera configurados para el sistema. Una vez que se hace el pedido con este permiso, se vuelve a poner el FALSE obligando al autorizador a volver a autorizar un pedido para este cliente.
+  createdAt           DateTime @default(now())
+}
+
+model Pedido {
+  id                 Int              @id @default(autoincrement())
+  montoSolicitado    Decimal          @db.Decimal(10, 2)
+  comentarioVendedor String?          @db.VarChar(255)
+  numeroPedido       String           @unique @default(cuid())
+  regalia            Int?
+  regaliaCobrada     Boolean?
+  // relaciones
+  cliente            Cliente          @relation(fields: [clienteId], references: [id])
+  clienteId          Int
+  entidad            Entidad          @relation(fields: [entidadId], references: [id])
+  entidadId          Int
+  creadoPor          User             @relation("CreadoPor", fields: [creadoPorId], references: [id])
+  creadoPorId        Int
+  tipoConsulta       TipoConsulta     @relation(fields: [tipoConsultaId], references: [id])
+  tipoConsultaId     Int
+  estado             PedidoEstado?
+  comision           PedidoComision?
+  attachmentFiles    AttachmentFile[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+enum PEDIDOESTADO {
+  PENDIENTE
+  PENDIENTE_DE_MARGEN
+  PENDIENTE_DE_MARGEN_OK
+  APROBADO
+  RECHAZADO
+}
+
+model PedidoEstado {
+  estado          PEDIDOESTADO @default(PENDIENTE)
+  enRevision      Boolean      @default(false)
+  montoAutorizado Decimal?     @db.Decimal(10, 2)
+  cantidadCuotas  Int?
+  montoCuota      Decimal?     @db.Decimal(10, 2)
+  comentario      String?      @db.VarChar(255)
+  fecha           DateTime?
+  pedido          Pedido       @relation(fields: [pedidoId], references: [id])
+  pedidoId        Int          @id
+  autorizador     User?        @relation(fields: [autorizadorId], references: [id])
+  autorizadorId   Int?
+}
+
+enum COMISIONESTADO {
+  // en un futuro uno de los estados sera "en billtera virtual" por ejemplo, para que la comision genere intereses diariamente hasta cobrar
+  COBRADO
+  NO_COBRADO
+}
+
+model PedidoComision {
+  id         Int            @id @default(autoincrement())
+  monto      Decimal        @db.Decimal(10, 2)
+  porcentaje Decimal        @db.Decimal(10, 2)
+  estado     COMISIONESTADO @default(NO_COBRADO)
+  cobradoAt  DateTime?
+  pedido     Pedido         @relation(fields: [pedidoId], references: [id])
+  pedidoId   Int            @unique
+  user       User           @relation(fields: [userId], references: [id])
+  userId     Int
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+model Setting {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String @db.VarChar(255)
+  value       String
+}
+
+model Logs {
+  id       Int      @id @default(autoincrement())
+  model    String
+  idTarget Int
+  action   String
+  userId   Int
+  date     DateTime
+
+  @@index([userId, idTarget])
+}
+
+model Message {
+  id        Int                @id @default(autoincrement())
+  title     String
+  body      String             @db.VarChar(512)
+  createdAt DateTime           @default(now())
+  users     UsersHasMessages[]
+}
+
+model UsersHasMessages {
+  message            Message   @relation(fields: [messageId], references: [id])
+  messageId          Int
+  senderUser         User      @relation("SendedMessages", fields: [senderUserId], references: [id])
+  senderUserId       Int
+  destinationUser    User      @relation("ReceivedMessages", fields: [destinationUserId], references: [id])
+  destinationUserId  Int
+  conversationThread String
+  isReaded           Boolean   @default(false)
+  readedAt           DateTime?
+
+  @@id([messageId, senderUserId, destinationUserId])
+}

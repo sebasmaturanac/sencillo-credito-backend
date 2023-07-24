@@ -1,0 +1,71 @@
+{
+  "name": "sencillo-credito-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "nodemon ./src/bin/www --inspect=127.0.0.1:9000",
+    "dev": "node --inspect=127.0.0.1:9000 ./src/bin/www",
+    "server:prod": "node ./build/app.bundle",
+    "clean": "rimraf build",
+    "build": "webpack --mode production --progress",
+    "prod": "set NODE_ENV=production && npm-run-all clean build server:prod",
+    "lint": "eslint ./src --fix",
+    "migrate": "prisma migrate dev",
+    "seed": "prisma db seed",
+    "reset": "prisma migrate reset"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.7.7",
+    "@prisma/client": "^3.15.2",
+    "aws-sdk": "^2.680.0",
+    "axios": "^0.19.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "cuid": "^2.1.8",
+    "debug": "~2.6.9",
+    "dotenv": "^8.2.0",
+    "express": "~4.16.1",
+    "helmet": "^3.21.2",
+    "image-thumbnail": "^1.0.14",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "~1.9.1",
+    "multer": "^1.4.4",
+    "nanoid": "^3.3.1",
+    "node-cron": "^2.0.3",
+    "npm-run-all": "^4.1.5",
+    "onesignal-node": "^3.3.0",
+    "socket.io": "^2.3.0",
+    "xlsx": "^0.18.5",
+    "yup": "^0.32.11"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.7.4",
+    "@babel/core": "^7.7.4",
+    "@babel/node": "^7.7.4",
+    "@babel/plugin-transform-runtime": "^7.7.6",
+    "@babel/preset-env": "^7.7.4",
+    "@faker-js/faker": "^6.0.0-beta.0",
+    "@types/node": "^18.0.0",
+    "babel-loader": "^8.1.0",
+    "eslint": "^8.8.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-prettier": "^4.0.0",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
+    "prisma": "^3.15.2",
+    "rimraf": "^3.0.0",
+    "ts-node": "^10.8.1",
+    "typescript": "^4.7.4",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11"
+  }
+}
