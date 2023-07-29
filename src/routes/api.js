@@ -19,6 +19,7 @@ const estadistica = require('./estadistica');
 const uploads = require('./uploads');
 const setting = require('./setting');
 const message = require('./message');
+const chat = require('./chat')
 
 /* ------------ DESPACHADOR DE RUTAS ---------------------------- */
 router.get('/test', (_req, res) => {
@@ -35,5 +36,6 @@ router.use('/estadistica', estadistica);
 router.use('/uploads', uploads);
 router.use('/setting', setting);
 router.use('/message', message);
+router.use('/chat', chat);
 
 module.exports = router;
