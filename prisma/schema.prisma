@@ -52,6 +52,9 @@ model User {
   receivedMessages               UsersHasMessages[] @relation("ReceivedMessages")
   sendedMessages                 UsersHasMessages[] @relation("SendedMessages")
   pedidosComision                PedidoComision[]
+  chats1 Chat[] @relation("ChatToUser1")
+  chats2 Chat[] @relation("ChatToUser2")
+  sentMessages  ChatMessage[] @relation("UserToChatMessage")
 }
 
 model UserAvailableApp {
@@ -220,9 +223,25 @@ model UsersHasMessages {
 
   @@id([messageId, senderUserId, destinationUserId])
 }
+
 model ChatMessage {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int        @id @default(autoincrement())
+  sender        User       @relation("UserToChatMessage", fields: [senderId], references: [id])
+  senderId      Int
+  chat          Chat       @relation(fields: [chatId], references: [id])
+  chatId        Int
+  content       String
+  resourceLink  String? // this could be a link to a resource in Amazon S3
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
+
+model Chat {
+  id           Int      @id @default(autoincrement())
+  participant1 User     @relation("ChatToUser1", fields: [participant1Id], references: [id])
+  participant1Id Int
+  participant2 User     @relation("ChatToUser2", fields: [participant2Id], references: [id])
+  participant2Id Int
+  messages     ChatMessage[]
+}
+
