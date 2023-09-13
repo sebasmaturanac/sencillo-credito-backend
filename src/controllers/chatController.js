@@ -43,52 +43,58 @@ async function getMessages(req, res) {
 async function createMessage(req, res) {
   try {
     const { content, chatId, senderId } = req.body;
-    const file = req.file;
+    let imageUrl = null;
 
-    const target = Date.now().toString();
-    const mimetype = file.mimetype;
-    const isImage = mimetype.startsWith('image/');
+    if (req.file) {
+      const file = req.file;
 
-    let base64;
-    if (isImage) {
-      const options = { height: 1080, responseType: 'buffer', fit: 'inside' };
-      base64 = await imageThumbnail(file.buffer, options);
-    } else {
-      base64 = file.buffer;
+      const target = Date.now().toString();
+      const mimetype = file.mimetype;
+      const isImage = mimetype.startsWith('image/');
+
+      let base64;
+      if (isImage) {
+        const options = { height: 1080, responseType: 'buffer', fit: 'inside' };
+        base64 = await imageThumbnail(file.buffer, options);
+      } else {
+        base64 = file.buffer;
+      }
+
+      const fileExtension = mimetype.split('/')[1]; // 'jpg' para imágenes JPEG, 'png' para imágenes PNG, 'pdf' para archivos PDF
+      const Key = `sencillobucket/sencillo_creditos-chatId_${chatId}-target_${target}.${fileExtension}`;
+      imageUrl = `https://${env.Bucket}.s3.${env.REGION}.amazonaws.com/${Key}`;
+
+      const params = { 
+        ...uploadParams,
+        Key,
+        Body: base64,
+        ContentType: mimetype,
+        ContentDisposition: 'inline'
+      };
+
+      s3Client.upload(params, (err) => {
+        if (err) return res.ingeitError(err);
+      });
     }
 
-    const fileExtension = mimetype.split('/')[1]; // 'jpg' para imágenes JPEG, 'png' para imágenes PNG, 'pdf' para archivos PDF
-    const Key = `sencillobucket/sencillo_creditos-chatId_${chatId}-target_${target}.${fileExtension}`;
-    const imageUrl = `https://${env.Bucket}.s3.${env.REGION}.amazonaws.com/${Key}`;
-
-    const params = { 
-      ...uploadParams,
-      Key,
-      Body: base64,
-      ContentType: mimetype,
-      ContentDisposition: 'inline'
-    };
-
-    s3Client.upload(params, async (err) => {
-      if (err) return res.ingeitError(err);
-
-      const chat = await prisma.ChatMessage.create({
-        data: {
-          content,
-          chatId: Number(chatId),
-          senderId: Number(senderId),
-          resourceLink: imageUrl,
-        },
-      });
-
-      getSocketInstance().emit('chats', chat);
-      return res.ingeit200('chat enviado', chat);
+    const chat = await prisma.ChatMessage.create({
+      data: {
+        content,
+        chatId: Number(chatId),
+        senderId: Number(senderId),
+        resourceLink: imageUrl,
+      },
     });
+
+    getSocketInstance().emit('chats', chat);
+    return res.ingeit200('chat enviado', chat);
+
   } catch (error) {
     console.error('error envio de chat: ', error);
     return res.ingeitError(error);
   }
 }
+
 
 
 
