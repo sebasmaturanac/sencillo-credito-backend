@@ -42,32 +42,42 @@ async function getMessages(req, res) {
 
 async function createMessage(req, res) {
   try {
-    const { content, chatId, senderId} = req.body; // Añade 'file' aquí
-    const imagen = req.file
+    const { content, chatId, senderId } = req.body;
+    const file = req.file;
 
-    // Sube la imagen a S3
     const target = Date.now().toString();
-    const mimetype = 'image/jpg';
-    const options = { height: 1080, responseType: 'buffer', fit: 'inside' };
-    const base64 = await imageThumbnail(imagen.buffer, options);
-    const Key = `sencillobucket/${'sencillo_creditos'}-chatId_${chatId}-target_${target}.jpg`;
+    const mimetype = file.mimetype;
+    const isImage = mimetype.startsWith('image/');
+
+    let base64;
+    if (isImage) {
+      const options = { height: 1080, responseType: 'buffer', fit: 'inside' };
+      base64 = await imageThumbnail(file.buffer, options);
+    } else {
+      base64 = file.buffer;
+    }
+
+    const fileExtension = mimetype.split('/')[1]; // 'jpg' para imágenes JPEG, 'png' para imágenes PNG, 'pdf' para archivos PDF
+    const Key = `sencillobucket/sencillo_creditos-chatId_${chatId}-target_${target}.${fileExtension}`;
     const imageUrl = `https://${env.Bucket}.s3.${env.REGION}.amazonaws.com/${Key}`;
+
     const params = { 
       ...uploadParams,
-       Key,
-       Body: base64,
-       ContentType: mimetype, // Asegúrate de que esté configurado correctamente para tu imagen
-       ContentDisposition: 'inline' };
+      Key,
+      Body: base64,
+      ContentType: mimetype,
+      ContentDisposition: 'inline'
+    };
+
     s3Client.upload(params, async (err) => {
       if (err) return res.ingeitError(err);
 
-      // Crea el mensaje en la base de datos
       const chat = await prisma.ChatMessage.create({
         data: {
           content,
           chatId: Number(chatId),
           senderId: Number(senderId),
-          resourceLink: imageUrl, // Guarda la URL de la imagen aquí
+          resourceLink: imageUrl,
         },
       });
 
@@ -79,6 +89,7 @@ async function createMessage(req, res) {
     return res.ingeitError(error);
   }
 }
+
 
 
 async function createChat(req, res) {
