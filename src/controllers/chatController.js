@@ -102,12 +102,22 @@ async function createChat(req, res) {
   try {
     const { participant1Id, participant2Id } = req.body;
 
-    // Comprueba si el chat ya existe
+    // Comprueba si el chat ya existe en ambas direcciones
     const existingChat = await prisma.Chat.findFirst({
       where: {
-        AND: [
-          { participant1Id: Number(participant1Id) },
-          { participant2Id: Number(participant2Id) },
+        OR: [
+          {
+            AND: [
+              { participant1Id: Number(participant1Id) },
+              { participant2Id: Number(participant2Id) },
+            ],
+          },
+          {
+            AND: [
+              { participant1Id: Number(participant2Id) },
+              { participant2Id: Number(participant1Id) },
+            ],
+          },
         ],
       },
     });
@@ -130,6 +140,7 @@ async function createChat(req, res) {
     return res.ingeitError(error);
   }
 }
+
 
 module.exports = {
   getMessages,
