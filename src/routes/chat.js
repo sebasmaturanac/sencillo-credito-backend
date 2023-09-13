@@ -6,7 +6,7 @@ const router = express.Router();
 const chat = require('../controllers/chatController')
 
 router.get('/messages/:chatId', chat.getMessages);
-router.post('/messages',chat.createMessage)
-router.post('/createchat',chat.createChat)
+router.post('/messages',chat.multerInstanceChat("file"),chat.createMessage)
+router.post('/createchat', chat.createChat)
 
 module.exports = router;

@@ -1,8 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
+const multer = require('multer');
 const prisma = new PrismaClient();
 const { getSocketInstance } = require('../socket/socket');
 const { s3Client, uploadParams } = require('../config/s3.config');
 const imageThumbnail = require('image-thumbnail');
+const env = require('../config/s3.env');
+
+const MB = 1000000;
+const multerInstanceChat = (name) => {
+  const storage = multer.memoryStorage();
+
+  const upload = multer({
+    storage: storage,
+    limits: {
+      fieldSize: 5 * MB,
+      fileSize: 5 * MB,
+    },
+  });
+
+  return upload.single(name);
+};
 
 async function getMessages(req, res) {
   try {
@@ -25,15 +42,22 @@ async function getMessages(req, res) {
 
 async function createMessage(req, res) {
   try {
-    const { content, chatId, senderId, file } = req.body; // Añade 'file' aquí
+    const { content, chatId, senderId} = req.body; // Añade 'file' aquí
+    const imagen = req.file
 
     // Sube la imagen a S3
     const target = Date.now().toString();
     const mimetype = 'image/jpg';
     const options = { height: 1080, responseType: 'buffer', fit: 'inside' };
-    const base64 = await imageThumbnail(file, options);
-    const Key = `${'sencillo_creditos'}-chatId_${chatId}-target_${target}.jpg`;
-    const params = { ...uploadParams, Key, Body: base64 };
+    const base64 = await imageThumbnail(imagen.buffer, options);
+    const Key = `sencillobucket/${'sencillo_creditos'}-chatId_${chatId}-target_${target}.jpg`;
+    const imageUrl = `https://${env.Bucket}.s3.${env.REGION}.amazonaws.com/${Key}`;
+    const params = { 
+      ...uploadParams,
+       Key,
+       Body: base64,
+       ContentType: mimetype, // Asegúrate de que esté configurado correctamente para tu imagen
+       ContentDisposition: 'inline' };
     s3Client.upload(params, async (err) => {
       if (err) return res.ingeitError(err);
 
@@ -43,7 +67,7 @@ async function createMessage(req, res) {
           content,
           chatId: Number(chatId),
           senderId: Number(senderId),
-          resourceLink: Key, // Guarda la URL de la imagen aquí
+          resourceLink: imageUrl, // Guarda la URL de la imagen aquí
         },
       });
 
@@ -93,5 +117,6 @@ async function createChat(req, res) {
 module.exports = {
   getMessages,
   createMessage,
-  createChat
+  createChat,
+  multerInstanceChat
 };
