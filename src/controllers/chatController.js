@@ -21,6 +21,42 @@ const multerInstanceChat = (name) => {
   return upload.single(name);
 };
 
+async function getUserByVendedor(req, res) {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'AUTORIZADOR'
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        suspended: true,
+        suspendedAt: true,
+        createdAt: true,
+        comercializadora: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: {
+        username: 'asc',
+      },
+    });
+    return res.ingeit200(`Usuarios`, users);
+  } catch (error) {
+    console.error('error: ', error);
+    return res.status(500).json(error);
+  }
+}
+
+
+
 async function getMessages(req, res) {
   try {
     const { chatId } = req.params; // Necesitarás el ID del chat para buscar los mensajes
@@ -143,6 +179,7 @@ async function createChat(req, res) {
 
 
 module.exports = {
+  getUserByVendedor,
   getMessages,
   createMessage,
   createChat,
