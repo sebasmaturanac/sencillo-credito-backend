@@ -54,6 +54,41 @@ async function getUserByVendedor(req, res) {
     return res.status(500).json(error);
   }
 }
+async function getUserComercializadora(req, res) {
+  try {
+    const { id } = req.params;
+    // Convert id to an integer using parseInt
+    const comercializadoraId = parseInt(id);
+
+    const users = await prisma.user.findMany({
+      where: {
+        id: comercializadoraId,
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        suspended: true,
+        suspendedAt: true,
+        createdAt: true,
+        comercializadora: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return res.ingeit200(`Usuarios`, users);
+  } catch (error) {
+    console.error('error: ', error);
+    return res.status(500).json(error);
+  }
+}
 
 
 
@@ -183,5 +218,6 @@ module.exports = {
   getMessages,
   createMessage,
   createChat,
-  multerInstanceChat
+  multerInstanceChat,
+  getUserComercializadora
 };
